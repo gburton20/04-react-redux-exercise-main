@@ -12,7 +12,7 @@
 
 5. Install dependencies by entering `npm install` in the terminal.
 
-6. Install React Redux and Redux by typing `npm i redux react-redux`.
+6. Install React Redux and Redux by typing `npm install redux react-redux`.
 
 7. Run the app by typing `npm run dev` in the terminal. This will provide a clickable link to open the app in your default browser.
 
@@ -44,8 +44,15 @@ function rootReducer(state = initialState, action) {
 
 4. Create the Redux store using createStore and export it.
 
+At the top of `store.js`:
+
 ```javascript
 import { createStore } from 'redux';
+```
+
+And at the bottom:
+
+```javascript
 
 const store = createStore(rootReducer);
 
@@ -56,9 +63,9 @@ export default store;
 
 1. In your `src` directory, create a file named `main.jsx`.
 
-2. Inside `main.jsx`, set up the entry point for your application by importing `StrictMode`, `createRoot`, `Provider`, `BrowserRouter`, `store`, and `App`.
+2. Inside `main.jsx`, import `Provider` from `react-redux` and `store` from `store.js`.
 
-3. Use `createRoot` to render the app within a `StrictMode`, wrapping it with `Provider` (with `store` as its prop) and `BrowserRouter`.
+3. In the return statement, wrap your App component with `Provider`, giving it the `store` prop set to your Redux store.
 
 ```javascript
 import { StrictMode } from 'react';
@@ -72,9 +79,7 @@ import App from './App.jsx';
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+	  <App />
     </Provider>
   </StrictMode>
 );
@@ -130,13 +135,15 @@ function App() {
 export default App;
 ```
 
+**To Confirm**: You should now see a form to enter your name when you run the app. After submitting your name, you should see a greeting message.
+
 ### User Story 2: As a user, I can see the trivia question being asked.
 
 **Step 1: Extend the Redux Store**
 
 1. In your `src` directory, open the `store.js` file.
 
-2. Extend the initial state to include `currentQuestion` and `questions`.
+2. Extend the initial state to include `currentQuestion`, `questions`, and `questionsAsked`.
 
 ```javascript
 const initialState = {
@@ -154,25 +161,18 @@ const initialState = {
 
 3. Extend the rootReducer function to handle the NEXT_QUESTION action.
 
+It will randomly select a question from the list of questions that have not been asked yet.
+
 ```javascript
 function rootReducer(state = initialState, action) {
   if (action.type === 'SET_USER_NAME') {
     return { ...state, userName: action.payload };
   } else if (action.type === 'NEXT_QUESTION') {
-    const remainingQuestions = state.questions.filter(
-      (q) => !state.questionsAsked.includes(q.id)
-    );
-
-    if (remainingQuestions.length === 0) {
-      return { ...state, currentQuestion: null };
-    }
-
-    const nextQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+    const nextQuestion = state.questions[Math.floor(Math.random() * state.questions.length)];
 
     return {
       ...state,
       currentQuestion: nextQuestion,
-      questionsAsked: [...state.questionsAsked, nextQuestion.id],
     };
   } else {
     return state;
@@ -188,7 +188,7 @@ function rootReducer(state = initialState, action) {
 
 3. Use `useSelector` to access the `currentQuestion` state.
 
-4. Add a `return` statement to display the current question if `userName` is set.
+4. Add to the `return` statement to display the current question if `userName` is set.
 
 ```javascript
 import { useDispatch, useSelector } from 'react-redux';
@@ -233,23 +233,22 @@ function App() {
 export default App;
 ```
 
-### User Story 3: As a user, I can enter an answer and see the results.
+**To Confirm**: You should now see a trivia question after entering your name and submitting the form. Try reloading and entering your name again to see another random question--you may have to do this a couple of times if it randomly selects the same question.
+
+### User Story 3: As a user, I can enter an answer and see if I got it right.
 
 **Step 1: Extend the Redux Store**
 
 1. In your `src` directory, open the `store.js` file.
 
-2. Extend the initial state to include `previousQuestion`, `isCorrect`, `questionsAsked`, `correctAnswers`, and `wrongAnswers`.
+2. Extend the initial state to include `isCorrect`.
 
 ```javascript
 const initialState = {
   userName: '',
   currentQuestion: null,
-  previousQuestion: null,
   isCorrect: false,
   questionsAsked: [],
-  correctAnswers: 0,
-  wrongAnswers: 0,
   questions: [
     { id: 1, text: 'What is 2 + 2?', answer: '4', category: 'easy' },
     { id: 2, text: 'What color is the sky?', answer: 'blue', category: 'easy' },
@@ -267,21 +266,11 @@ function rootReducer(state = initialState, action) {
   if (action.type === 'SET_USER_NAME') {
     return { ...state, userName: action.payload };
   } else if (action.type === 'NEXT_QUESTION') {
-    const remainingQuestions = state.questions.filter(
-      (q) => !state.questionsAsked.includes(q.id)
-    );
-
-    if (remainingQuestions.length === 0) {
-      return { ...state, currentQuestion: null };
-    }
-
-    const nextQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+    const nextQuestion = state.questions[Math.floor(Math.random() * state.questions.length)];
 
     return {
       ...state,
-      previousQuestion: state.currentQuestion,
       currentQuestion: nextQuestion,
-      questionsAsked: [...state.questionsAsked, nextQuestion.id],
     };
   } else if (action.type === 'SUBMIT_ANSWER') {
     const isCorrect = action.payload.toLowerCase() === state.currentQuestion.answer.toLowerCase();
@@ -289,8 +278,6 @@ function rootReducer(state = initialState, action) {
     return {
       ...state,
       isCorrect: isCorrect,
-      correctAnswers: isCorrect ? state.correctAnswers + 1 : state.correctAnswers,
-      wrongAnswers: isCorrect ? state.wrongAnswers : state.wrongAnswers + 1,
     };
   } else {
     return state;
@@ -302,15 +289,13 @@ function rootReducer(state = initialState, action) {
 
 1. In your `src` directory, open the `App.jsx` file.
 
-2. Extend the `handleNameSubmit` function to dispatch the `NEXT_QUESTION` action.
-
-3. Use `useSelector` to access the `currentQuestion` state.
-
-4. Add a `return` statement to display the current question and an input field if `userName` is set.
+3. Use `useSelector` to access the `isCorrect` state.
 
 5. Define a `handleSubmit` function to handle the submission of an answer. This function should dispatch the `SUBMIT_ANSWER` action with the user's input as the payload.
 
-6. Update the JSX to include a form for submitting the answer.
+6. Update the JSX to include a form for submitting the answer, managing the state of the current answer as it's typed in.
+
+7. Add a paragraph to display whether the answer was correct.
 
 ```javascript
 import { useDispatch, useSelector } from 'react-redux';
@@ -320,6 +305,7 @@ function App() {
   const dispatch = useDispatch();
   const userName = useSelector((state) => state.userName);
   const currentQuestion = useSelector((state) => state.currentQuestion);
+  const isCorrect = useSelector((state) => state.isCorrect);
   const [answer, setAnswer] = useState('');
 
   function handleNameSubmit(e) {
@@ -331,7 +317,6 @@ function App() {
   function handleSubmit(e) {
     e.preventDefault();
     dispatch({ type: 'SUBMIT_ANSWER', payload: answer });
-    setAnswer('');
   }
 
   return (
@@ -364,12 +349,18 @@ function App() {
           )}
         </div>
       )}
+      
+      {isCorrect !== null && (
+        <p>{isCorrect ? 'Correct!' : 'Incorrect!'}</p>
+      )}
     </div>
   );
 }
 
 export default App;
 ```
+
+**To Confirm**: You should now see a message indicating whether your answer was correct after submitting it.
 
 ### User Story 4: As a user, I can see the next trivia question immediately after submitting an answer.
 
@@ -379,16 +370,17 @@ export default App;
 
 2. Extend the `handleSubmit` function to dispatch the `NEXT_QUESTION` action after submitting the answer.
 
-3. Add a `useEffect` hook to reset the answer input when the next question is loaded.
+3. Reset the answer state after the submission so that the input box is cleared.
 
 ```javascript
 import { useDispatch, useSelector } from 'react-redux';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 function App() {
   const dispatch = useDispatch();
   const userName = useSelector((state) => state.userName);
   const currentQuestion = useSelector((state) => state.currentQuestion);
+  const isCorrect = useSelector((state) => state.isCorrect);
   const [answer, setAnswer] = useState('');
 
   function handleNameSubmit(e) {
@@ -403,10 +395,6 @@ function App() {
     dispatch({ type: 'NEXT_QUESTION' });
     setAnswer('');
   }
-
-  useEffect(() => {
-    setAnswer('');
-  }, [currentQuestion]);
 
   return (
     <div>
@@ -438,6 +426,10 @@ function App() {
           )}
         </div>
       )}
+      
+      {isCorrect !== null && (
+        <p>{isCorrect ? 'Correct!' : 'Incorrect!'}</p>
+      )}
     </div>
   );
 }
@@ -445,17 +437,139 @@ function App() {
 export default App;
 ```
 
-### User Story 5: As a user, I can see if my answer was correct.
+**To Confirm**: You should now see the next trivia question immediately after submitting an answer. You may have to answer the same question twice--we're not checking for duplicates yet.
 
-**Step 1: Create the ResultsCard Component**
+### User Story 5: As a user, when I answer a question, I get a new question that I haven't seen before.
+
+**Step 1: Extend the Redux Store**
+
+1. In your `src` directory, open the `store.js` file.
+
+2. Extend the initial state to include `questionsAsked`.
+
+```javascript
+const initialState = {
+  userName: '',
+  currentQuestion: null,
+  isCorrect: null,
+  questionsAsked: [],
+  questions: [
+	{ id: 1, text: 'What is 2 + 2?', answer: '4', category: 'easy' },
+	{ id: 2, text: 'What color is the sky?', answer: 'blue', category: 'easy' },
+	{ id: 3, text: 'What is the capital of France?', answer: 'Paris', category: 'easy' },
+	{ id: 4, text: 'What planet do we live on?', answer: 'Earth', category: 'easy' },
+	{ id: 5, text: 'What is H2O?', answer: 'water', category: 'easy' },
+  ],
+};
+```
+
+3. Extend the rootReducer function to update the `questionsAsked` array when a question is answered.
+
+```javascript
+function rootReducer(state = initialState, action) {
+  if (action.type === 'SET_USER_NAME') {
+	return { ...state, userName: action.payload };
+  } else if (action.type === 'NEXT_QUESTION') {
+	const remainingQuestions = state.questions.filter(
+	  (q) => !state.questionsAsked.includes(q.id)
+	);
+
+	if (remainingQuestions.length === 0) {
+	  return { ...state, currentQuestion: null };
+	}
+
+	const nextQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+
+	return {
+	  ...state,
+	  currentQuestion: nextQuestion,
+	  questionsAsked: [...state.questionsAsked, nextQuestion.id],
+	};
+  } else if (action.type === 'SUBMIT_ANSWER') {
+	const isCorrect = action.payload.toLowerCase() === state.currentQuestion.answer.toLowerCase();
+
+	return {
+	  ...state,
+	  isCorrect: isCorrect,
+	};
+  } else {
+	return state;
+  }
+}
+```
+
+**To Confirm**: You should now see a new question after submitting an answer, and you should not see the same question twice.
+
+### User Story 6: As a user, I can see the previous question and its correct answer.
+
+**Step 1: Extend the Redux Store**
+
+1. In your `src` directory, open the `store.js` file.
+
+2. Extend the initial state to include `previousQuestion`.
+
+```javascript
+const initialState = {
+  userName: '',
+  currentQuestion: null,
+  previousQuestion: null,
+  isCorrect: null,
+  questionsAsked: [],
+  questions: [
+	{ id: 1, text: 'What is 2 + 2?', answer: '4', category: 'easy' },
+	{ id: 2, text: 'What color is the sky?', answer: 'blue', category: 'easy' },
+	{ id: 3, text: 'What is the capital of France?', answer: 'Paris', category: 'easy' },
+	{ id: 4, text: 'What planet do we live on?', answer: 'Earth', category: 'easy' },
+	{ id: 5, text: 'What is H2O?', answer: 'water', category: 'easy' },
+  ],
+};
+```
+
+3. Extend the rootReducer function to store the previous question when a new question is asked.
+
+```javascript
+function rootReducer(state = initialState, action) {
+  if (action.type === 'SET_USER_NAME') {
+	return { ...state, userName: action.payload };
+  } else if (action.type === 'NEXT_QUESTION') {
+	const remainingQuestions = state.questions.filter(
+	  (q) => !state.questionsAsked.includes(q.id)
+	);
+
+	if (remainingQuestions.length === 0) {
+	  return { ...state, currentQuestion: null };
+	}
+
+	const nextQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+
+	return {
+	  ...state,
+	  previousQuestion: state.currentQuestion,
+	  currentQuestion: nextQuestion,
+	  questionsAsked: [...state.questionsAsked, nextQuestion.id],
+	};
+  } else if (action.type === 'SUBMIT_ANSWER') {
+	const isCorrect = action.payload.toLowerCase() === state.currentQuestion.answer.toLowerCase();
+
+	return {
+	  ...state,
+	  isCorrect: isCorrect,
+	};
+  } else {
+	return state;
+  }
+}
+```
+
+**Step 2: Create the `ResultsCard` Component**
 
 1. In your `src` directory, create a file named `ResultsCard.jsx`.
 
-2. Inside `ResultsCard.jsx`, create the `ResultsCard` component by importing `useSelector` from `react-redux`.
+2. Inside `ResultsCard.jsx`, create the `ResultsCard` component and import `useSelector` from `react-redux`.
 
 3. Use `useSelector` to access the `isCorrect` and `previousQuestion` state properties.
 
-4. Add a `return` statement that displays the previous question text, the correct answer, and a message indicating whether the user's answer was correct.
+4. Add a `return` statement to display the previous question and answer, along with a message indicating whether the user's answer was correct.
 
 5. Export the `ResultsCard` component.
 
@@ -464,14 +578,15 @@ import { useSelector } from 'react-redux';
 
 function ResultsCard() {
   const isCorrect = useSelector((state) => state.isCorrect);
-  const question = useSelector((state) => state.previousQuestion);
+  const previousQuestion = useSelector((state) => state.previousQuestion);
 
   return (
     <div>
-      <h3>Previous Question:</h3>
-      <p>{question.text}</p>
-      <p>Answer: {question.answer}</p>
-      <h3>{isCorrect ? 'Correct!' : 'Try the next question...'}</h3>
+      <p style={{color: isCorrect ? 'darkgreen' : 'red'}}>{isCorrect ? 'Correct!' : 'Incorrect!'}</p>
+      <p>Previous Question:</p>
+      <p>"{previousQuestion.text}"</p>
+      <p>{isCorrect ? 'Your' : 'Correct'} Answer:</p>
+      <p>"{previousQuestion.answer}"</p>
     </div>
   );
 }
@@ -479,7 +594,7 @@ function ResultsCard() {
 export default ResultsCard;
 ```
 
-**Step 2: Update the App Component to Include ResultsCard**
+**Step 3: Update the App Component to Include `ResultsCard`**
 
 1. In your `src` directory, open the `App.jsx` file.
 
@@ -487,18 +602,19 @@ export default ResultsCard;
 
 3. Use `useSelector` to access the `previousQuestion` state.
 
-4. Add a `return` statement to display the `ResultsCard` component below the trivia form.
+4. Replace the paragraph that displays whether the answer was correct with the `ResultsCard` component, conditionally rendering it only when there is a previous question.
 
 ```javascript
 import { useDispatch, useSelector } from 'react-redux';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+
 import ResultsCard from './ResultsCard';
 
 function App() {
   const dispatch = useDispatch();
   const userName = useSelector((state) => state.userName);
   const currentQuestion = useSelector((state) => state.currentQuestion);
-  const previousQuestion = useSelector((state) => state.previousQuestion);
+  const isCorrect = useSelector((state) => state.isCorrect);
   const [answer, setAnswer] = useState('');
 
   function handleNameSubmit(e) {
@@ -513,10 +629,6 @@ function App() {
     dispatch({ type: 'NEXT_QUESTION' });
     setAnswer('');
   }
-
-  useEffect(() => {
-    setAnswer('');
-  }, [currentQuestion]);
 
   return (
     <div>
@@ -546,9 +658,10 @@ function App() {
               </form>
             </div>
           )}
-          {previousQuestion && <ResultsCard />}
         </div>
       )}
+      
+      {previousQuestion && <ResultsCard />}
     </div>
   );
 }
@@ -556,159 +669,109 @@ function App() {
 export default App;
 ```
 
-### User Story 6: As a user, I can complete the quiz and see my results.
+**To Confirm**: You should now see the previous question and answer displayed after submitting an answer.
+
+### User Story 7: As a user, I can complete the quiz and see my results.
 
 **Step 1: Extend the Redux Store**
 
 1. In your `src` directory, open the `store.js` file.
 
-2. Extend the initial state to include `totalQuestions` and update `questionsAsked` to count the number of questions asked.
+2. Extend the initial state to include `totalCorrect`.
 
 ```javascript
 const initialState = {
   userName: '',
   currentQuestion: null,
   previousQuestion: null,
-  isCorrect: false,
-  questionsAsked: 0,
-  correctAnswers: 0,
-  wrongAnswers: 0,
-  totalQuestions: 5,
+  isCorrect: null,
+  totalCorrect: 0,
+  questionsAsked: [],
   questions: [
-    { id: 1, text: 'What is 2 + 2?', answer: '4', category: 'easy' },
-    { id: 2, text: 'What color is the sky?', answer: 'blue', category: 'easy' },
-    { id: 3, text: 'What is the capital of France?', answer: 'Paris', category: 'easy' },
-    { id: 4, text: 'What planet do we live on?', answer: 'Earth', category: 'easy' },
-    { id: 5, text: 'What is H2O?', answer: 'water', category: 'easy' },
+	{ id: 1, text: 'What is 2 + 2?', answer: '4', category: 'easy' },
+	{ id: 2, text: 'What color is the sky?', answer: 'blue', category: 'easy' },
+	{ id: 3, text: 'What is the capital of France?', answer: 'Paris', category: 'easy' },
+	{ id: 4, text: 'What planet do we live on?', answer: 'Earth', category: 'easy' },
+	{ id: 5, text: 'What is H2O?', answer: 'water', category: 'easy' },
   ],
 };
 ```
 
-3. Update the rootReducer function to increment the questionsAsked count when a question is answered.
+3. Extend the rootReducer function to update the `totalCorrect` count when a question is answered correctly.
 
 ```javascript
 function rootReducer(state = initialState, action) {
   if (action.type === 'SET_USER_NAME') {
-    return { ...state, userName: action.payload };
+	return { ...state, userName: action.payload };
   } else if (action.type === 'NEXT_QUESTION') {
-    const remainingQuestions = state.questions.filter(
-      (q) => !state.questionsAsked.includes(q.id)
-    );
+	const remainingQuestions = state.questions.filter(
+	  (q) => !state.questionsAsked.includes(q.id)
+	);
 
-    if (remainingQuestions.length === 0) {
-      return { ...state, currentQuestion: null };
-    }
+	if (remainingQuestions.length === 0) {
+	  return { ...state, currentQuestion: null };
+	}
 
-    const nextQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
+	const nextQuestion = remainingQuestions[Math.floor(Math.random() * remainingQuestions.length)];
 
-    return {
-      ...state,
-      previousQuestion: state.currentQuestion,
-      currentQuestion: nextQuestion,
-      questionsAsked: state.questionsAsked + 1,
-    };
+	return {
+	  ...state,
+	  previousQuestion: state.currentQuestion,
+	  currentQuestion: nextQuestion,
+	  questionsAsked: [...state.questionsAsked, nextQuestion.id],
+	};
   } else if (action.type === 'SUBMIT_ANSWER') {
-    const isCorrect = action.payload.toLowerCase() === state.currentQuestion.answer.toLowerCase();
+	const isCorrect = action.payload.toLowerCase() === state.currentQuestion.answer.toLowerCase();
 
-    return {
-      ...state,
-      isCorrect: isCorrect,
-      correctAnswers: isCorrect ? state.correctAnswers + 1 : state.correctAnswers,
-      wrongAnswers: isCorrect ? state.wrongAnswers : state.wrongAnswers + 1,
-    };
+	return {
+	  ...state,
+	  isCorrect: isCorrect,
+	  totalCorrect: isCorrect ? state.totalCorrect + 1 : state.totalCorrect,
+	};
   } else {
-    return state;
+	return state;
   }
 }
 ```
 
-**Step 2: Update the App Component to Display the Total Results**
+**Step 2: Update the `ResultsCard` Component**
 
-1. In your `src` directory, open the `App.jsx` file.
+1. In your `src` directory, open the `ResultsCard.jsx` file.
 
-2. Use `useSelector` to access the `correctAnswers`, `wrongAnswers`, and `totalQuestions` state.
+2. Use `useSelector` to access the state values for `totalCorrect`, `currentQuestion`, and `questions`.
 
-3. Add a `return` statement to display the total results when the quiz is completed.
-
-4. Update the JSX to include a message showing the total correct and wrong answers.
+3. Add a condition to display the total results when the quiz is completed.
 
 ```javascript
-import { useDispatch, useSelector } from 'react-redux';
-import { useState, useEffect } from 'react';
-import ResultsCard from './ResultsCard';
+import { useSelector } from 'react-redux';
 
-function App() {
-  const dispatch = useDispatch();
-  const userName = useSelector((state) => state.userName);
-  const currentQuestion = useSelector((state) => state.currentQuestion);
+function ResultsCard() {
+  const isCorrect = useSelector((state) => state.isCorrect);
   const previousQuestion = useSelector((state) => state.previousQuestion);
-  const correctAnswers = useSelector((state) => state.correctAnswers);
-  const wrongAnswers = useSelector((state) => state.wrongAnswers);
-  const totalQuestions = useSelector((state) => state.totalQuestions);
-  const questionsAsked = useSelector((state) => state.questionsAsked);
-  const [answer, setAnswer] = useState('');
-
-  function handleNameSubmit(e) {
-    e.preventDefault();
-    dispatch({ type: 'SET_USER_NAME', payload: e.target.name.value });
-    dispatch({ type: 'NEXT_QUESTION' });
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    dispatch({ type: 'SUBMIT_ANSWER', payload: answer });
-    dispatch({ type: 'NEXT_QUESTION' });
-    setAnswer('');
-  }
-
-  useEffect(() => {
-    setAnswer('');
-  }, [currentQuestion]);
+  const currentQuestion = useSelector((state) => state.currentQuestion);
+  const questions = useSelector((state) => state.questions);
+  const totalCorrect = useSelector((state) => state.totalCorrect);
 
   return (
-    <div>
-      {!userName && (
-        <form onSubmit={handleNameSubmit}>
-          <label>
-            Enter your name:
-            <input type="text" name="name" />
-          </label>
-          <button type="submit">Start</button>
-        </form>
-      )}
-
-      {userName && (
-        <div>
-          <h2>Hello, {userName}!</h2>
-          {currentQuestion && questionsAsked < totalQuestions && (
-            <div>
-              <p>{currentQuestion.text}</p>
-              <form onSubmit={handleSubmit}>
-                <input 
-                  type="text" 
-                  value={answer} 
-                  onChange={(e) => setAnswer(e.target.value)} 
-                />
-                <button type="submit">Submit</button>
-              </form>
-            </div>
-          )}
-          {previousQuestion && <ResultsCard />}
-          {questionsAsked >= totalQuestions && (
-            <div>
-              <p>Quiz Completed!</p>
-              <p>Total Correct: {correctAnswers}</p>
-              <p>Total Wrong: {wrongAnswers}</p>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+	<div>
+	  <p style={{color: isCorrect ? 'darkgreen' : 'red'}}>{isCorrect ? 'Correct!' : 'Incorrect!'}</p>
+	  <p>Previous Question:</p>
+	  <p>"{previousQuestion.text}"</p>
+	  <p>{isCorrect ? 'Your' : 'Correct'} Answer:</p>
+	  <p>"{previousQuestion.answer}"</p>
+	  {currentQuestion === null && previousQuestion !== null && (
+			<h2>Quiz Completed!</h2>
+	  		<p>Total Correct: {totalCorrect}</p>
+			<p>Total Incorrect: {questions.length - totalCorrect}</p>
+	  )}
+	</div>
   );
 }
 
-export default App;
+export default ResultsCard;
 ```
+
+**To Confirm**: You should now see the total correct and incorrect when the quiz is completed.
 
 ### Wrapping Up
 
@@ -731,4 +794,4 @@ If you want to take this exercise further, here are some additional features you
 - Add the ability to restart the quiz after completing it.
 - Implement a scoring system to award points for correct answers.
 - Include different categories for the trivia questions, and allow the user to select a category.
-- Add a timer to limit the time for answering each question.
+- Add a timer to limit the time for answering each question. 
